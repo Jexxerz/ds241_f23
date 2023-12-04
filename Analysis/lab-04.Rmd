@@ -1,0 +1,158 @@
+---
+title: "Lab 04 - La Quinta is Spanish for next to Denny's, Pt. 1"
+author: "Jesse Dykes"
+date: "October 11, 2023"
+output: html_document
+---
+
+### Load packages and data
+
+```{r load-packages, message = FALSE}
+library(tidyverse) 
+# library(dsbox) 
+library(here)
+library(janitor)
+```
+
+```{r load-data, message = FALSE}
+thisfile = here("data_raw", "states.csv")
+states = read_csv(thisfile) |> clean_names()
+
+thisfile = here("data_raw", "dennys.csv")
+dennys = read_csv(thisfile) |> clean_names()
+
+thisfile = here("data_raw", "laquinta.csv")
+laquinta = read_csv(thisfile) |> clean_names()
+```
+
+### Exercise 1
+
+The dimensions of the Denny's data frame is 1643 by 6. There are 1643 Denny's locations that are logged under 6 different variables (street address, city, state, zip code, latitude, and longitude of each location).
+
+### Exercise 2
+
+The dimensions of the La Quinta data frame is 909 by 6. It is similar to the Denny's data frame in that they both use the same variables and each entry is a location.
+
+### Exercise 3
+
+Denny's - 146 non-US locations
+
+La Quinta - Unknown, but some non-zero number
+
+### Exercise 4
+
+My first thought was to us is.na(), hoping that there wouldn't be an applicable state for countries outside of the US. One could also generalize the longitude to filter for anything not in the western hemisphere.
+
+### Exercise 5
+
+```{r}
+internDennys = dennys |>
+  filter(!(state %in% states$abbreviation))
+```
+
+### Exercise 6
+
+```{r}
+dennys = dennys |>
+  mutate(country = "United States")
+```
+
+
+### Exercise 7
+
+```{r}
+internQuinta = laquinta |>
+  filter(!(state %in% states$abbreviation))
+```
+
+### Exercise 8
+
+```{r}
+laquinta = laquinta |>
+  mutate(country = case_when(
+    state %in% state.abb              ~ "United States",
+    state %in% c("ON", "BC")          ~ "Canada",
+    state == "ANT"                    ~ "Colombia",
+    state == "FM"                     ~ "Honduras",
+    .default = "Mexico"
+  ))
+
+laquinta = laquinta |>
+  filter(country == "United States")
+```
+
+
+### Exercise 9
+
+```{r}
+
+
+dennys |>
+  count(state, sort = TRUE) |>
+  inner_join(states, by = c("state" = "abbreviation"))
+
+laquinta |>
+  count(state, sort = TRUE) |>
+  inner_join(states, by = c("state" = "abbreviation"))
+```
+The top 3 states for both are Florida, Texas, and California in some order. This is not surprising as these are the three most populous states outside of the northeast and they have lenient business laws.
+
+### Exercise 10
+
+```{r}
+dennys |>
+  count(state) |>
+  inner_join(states, by = c("state" = "abbreviation")) |>
+  mutate(perSqMile = n / area)
+
+laquinta |>
+  count(state) |>
+  inner_join(states, by = c("state" = "abbreviation")) |>
+  mutate(perSqMile = n / area)
+
+
+```
+
+Although not a "state" by casual terms, DC has the most Denny's per square mile, mostly due to its incredibly small size.
+
+A similar situation it true for La Quinta: the smallest state (Rhode Island) has the most locations per square mile.
+
+
+
+```{r}
+dennys <- dennys %>%
+  mutate(establishment = "Denny's")
+
+laquinta <- laquinta %>%
+  mutate(establishment = "La Quinta")
+
+dn_lq <- bind_rows(dennys, laquinta)
+
+ggplot(dn_lq, mapping = aes(x = longitude, y = latitude, color = establishment)) +
+  geom_point()
+```
+
+
+### Exercise 11
+
+```{r}
+dn_lq |>
+  filter(state == "NC") |>
+  ggplot( mapping = aes(x = longitude, y = latitude, color = establishment)) +
+  geom_point(aes(alpha = 0.1)) +
+  xlim(-120,-70) +
+  ylim(25, 45)
+```
+
+
+### Exercise 12
+
+```{r}
+dn_lq |>
+  filter(state == "TX") |>
+  ggplot( mapping = aes(x = longitude, y = latitude, color = establishment)) +
+  geom_point(aes(alpha = 0.1)) #+
+  #xlim(-120,-70) +
+  #ylim(25, 45)
+```
+
