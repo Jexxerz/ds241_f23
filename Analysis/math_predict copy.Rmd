@@ -1,0 +1,53 @@
+---
+title: "MA 132 SP23 Enrollment Prediction"
+Subtitle: "Juliet Thistleton, Jesse Dykes, Jasson Ofosu-Mensah"
+output: html_notebook
+---
+
+Import Relavent libraries
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(stringr)
+library(skimr)
+library(scales)
+
+```
+Import data set 
+```{r}
+thisfile <- here("data_raw", "CU_ACAD_DEPT_WHEN_OFF_ENRL.csv")
+
+df1 <- read_csv(thisfile) |> clean_names()
+```
+
+Filter only MA 132
+```{r}
+df2 = df1 |> 
+  filter(subject=="MA") |>
+  select(-acad_org,-current_status,-course_id,-title) |>
+  filter(component=="LEC", catalog %in% c(131,132) ) |>
+  mutate(catalog=as.character(catalog)) |>
+  separate_wider_delim(term_8," ",names = c("semester", "yr")) |>
+  filter(!(semester=="Summer")) |>
+  select(-subject) |>
+  mutate(ay=((term_7-4000)/10) |> round()) |>
+  select(-term_7,-yr,-component) |>
+  slice_head(n=1,by=c("catalog","section","semester","ay"))|>
+  select(-instructor) |>
+  summarise(tot_enrl = sum(tot_enrl), .by=c("catalog","semester","ay")) |>
+  pivot_wider(id_cols = ay,names_from = c("semester","catalog"),values_from = tot_enrl) |>
+  clean_names() |>
+  select(-spring_131)
+
+df2 = df2 |>
+      mutate(fall_enrl = fall_131 + fall_132)
+```
+
+``` {r}
+
+  ggplot(df2, aes(x = fall_enrl, y = spring_132)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE)
+
+```
